@@ -115,12 +115,14 @@ async function authenticate(credential) {
 }
 
 phoneInput.addEventListener("input", (e) => {
-  const cleaned = e.target.value.replace(/[^\d-]/g, "");
-  if (e.target.value !== cleaned) {
-    const pos = e.target.selectionStart - (e.target.value.length - cleaned.length);
-    e.target.value = cleaned;
-    if (pos >= 0) e.target.setSelectionRange(pos, pos);
+  const digits = e.target.value.replace(/\D/g, "").slice(0, 11);
+  let formatted = digits;
+  if (digits.length > 7) {
+    formatted = digits.slice(0, 3) + "-" + digits.slice(3, 7) + "-" + digits.slice(7);
+  } else if (digits.length > 3) {
+    formatted = digits.slice(0, 3) + "-" + digits.slice(3);
   }
+  e.target.value = formatted;
 });
 
 form.addEventListener("submit", async (e) => {
