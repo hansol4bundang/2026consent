@@ -60,18 +60,27 @@ body {
   gap: 12px;
 }
 
-input[type="tel"] {
+input[type="tel"],
+input[type="text"] {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 12px 14px;
   font-size: 16px;
   outline: none;
   transition: border-color 120ms ease;
 }
 
-input[type="tel"]:focus {
+input[type="tel"] {
+  padding: 12px 14px;
+}
+
+input[type="text"] {
+  padding: 18px 14px;
+}
+
+input[type="tel"]:focus,
+input[type="text"]:focus {
   border-color: var(--accent);
 }
 
