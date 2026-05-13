@@ -83,12 +83,9 @@ input[type="text"] {
   transition: border-color 120ms ease;
 }
 
-input[type="tel"] {
-  padding: 12px 14px;
-}
-
+input[type="tel"],
 input[type="text"] {
-  padding: 18px 14px;
+  padding: 14px 14px;
 }
 
 input[type="tel"]:focus,
