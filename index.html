@@ -12,34 +12,43 @@
       <h1>인증</h1>
       <p class="hint">등록된 이름과 휴대폰 번호를 입력해 주세요.</p>
       <form id="auth-form" autocomplete="off">
-        <input
-          id="name"
-          name="name"
-          type="text"
-          placeholder="이름"
-          required
-          autocomplete="off"
-        />
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          inputmode="numeric"
-          placeholder="010-1234-5678"
-          pattern="[0-9\-]*"
-          required
-          autocomplete="off"
-        />
-        <input
-          id="pepper"
-          name="pepper"
-          type="text"
-          placeholder="비밀 단어"
-          required
-          autocomplete="off"
-          spellcheck="false"
-          autocapitalize="off"
-        />
+        <div class="field">
+          <label for="name">이름</label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="홍길동"
+            required
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <label for="phone">핸드폰 번호</label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            inputmode="numeric"
+            placeholder="010-1234-5678"
+            pattern="[0-9\-]*"
+            required
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <label for="pepper">비밀 단어</label>
+          <input
+            id="pepper"
+            name="pepper"
+            type="text"
+            placeholder=""
+            required
+            autocomplete="off"
+            spellcheck="false"
+            autocapitalize="off"
+          />
+        </div>
         <button id="submit-btn" type="submit">확인</button>
       </form>
       <p id="status" class="status" role="status" aria-live="polite"></p>
