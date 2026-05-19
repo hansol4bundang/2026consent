@@ -1,10 +1,10 @@
 const DATA_URL = "data.json";
+const ITER = 250000;
 
 const $ = (id) => document.getElementById(id);
 const form = $("auth-form");
 const nameInput = $("name");
 const phoneInput = $("phone");
-const pepperInput = $("pepper");
 const submitBtn = $("submit-btn");
 const statusEl = $("status");
 
@@ -23,8 +23,8 @@ function normalizeName(raw) {
   return (raw || "").normalize("NFC").trim();
 }
 
-function buildCredential(name, phone, pepper) {
-  return name + CRED_SEP + phone + pepper;
+function buildCredential(name, phone) {
+  return name + CRED_SEP + phone;
 }
 
 function b64ToBytes(b64) {
@@ -57,12 +57,12 @@ async function deriveKey(credential, saltBytes, iterations) {
   );
 }
 
-async function tryDecryptEntry(entry, key) {
+async function tryDecryptContentKey(entry, userKey) {
   try {
     const iv = b64ToBytes(entry.iv);
     const ct = b64ToBytes(entry.ct);
-    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
-    return new TextDecoder().decode(pt);
+    const raw = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, userKey, ct);
+    return new Uint8Array(raw);
   } catch {
     return null;
   }
@@ -94,42 +94,60 @@ async function authenticate(credential) {
     return;
   }
 
-  if (!data || !data.salt || !data.iterations || !Array.isArray(data.entries)) {
+  if (!data || !data.salt || !Array.isArray(data.entries)) {
     setStatus("데이터 형식이 올바르지 않습니다.", "error");
     return;
   }
 
   const saltBytes = b64ToBytes(data.salt);
-  const key = await deriveKey(credential, saltBytes, data.iterations);
+  const userKey = await deriveKey(credential, saltBytes, data.iterations ?? ITER);
 
   for (const entry of data.entries) {
-    const pt = await tryDecryptEntry(entry, key);
-    if (pt !== null) {
+    const contentKeyBytes = await tryDecryptContentKey(entry, userKey);
+    if (contentKeyBytes === null) continue;
+
+    const contentKey = await crypto.subtle.importKey(
+      "raw",
+      contentKeyBytes,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"]
+    );
+    try {
+      const contentIv = b64ToBytes(data.content.iv);
+      const contentCt = b64ToBytes(data.content.ct);
+      const pt = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: contentIv },
+        contentKey,
+        contentCt
+      );
+      const html = new TextDecoder().decode(pt);
       setStatus("인증 성공", "success");
-      showSecretPage(pt);
-      return;
+      showSecretPage(html);
+    } catch {
+      // 콘텐츠 키 복호화는 됐으나 콘텐츠 복호화 실패 (데이터 손상)
+      setStatus("데이터를 복호화하지 못했습니다.", "error");
     }
+    return;
   }
 
+  setStatus("등록되지 않은 정보입니다.\n아래 대표번호로 연락하여 소유주 등록을 해주세요.", "error");
   setStatus("등록되지 않은 정보입니다.", "error");
 }
 
 phoneInput.addEventListener("input", (e) => {
-  const digits = e.target.value.replace(/\D/g, "").slice(0, 11);
-  let formatted = digits;
-  if (digits.length > 7) {
-    formatted = digits.slice(0, 3) + "-" + digits.slice(3, 7) + "-" + digits.slice(7);
-  } else if (digits.length > 3) {
-    formatted = digits.slice(0, 3) + "-" + digits.slice(3);
+  const cleaned = e.target.value.replace(/[^\d-]/g, "");
+  if (e.target.value !== cleaned) {
+    const pos = e.target.selectionStart - (e.target.value.length - cleaned.length);
+    e.target.value = cleaned;
+    if (pos >= 0) e.target.setSelectionRange(pos, pos);
   }
-  e.target.value = formatted;
 });
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = normalizeName(nameInput.value);
   const phone = normalizePhone(phoneInput.value);
-  const pepper = normalizeName(pepperInput.value);
   if (!name) {
     setStatus("이름을 입력해 주세요.", "error");
     return;
@@ -138,14 +156,10 @@ form.addEventListener("submit", async (e) => {
     setStatus("휴대폰 번호를 확인해 주세요.", "error");
     return;
   }
-  if (!pepper) {
-    setStatus("비밀 단어를 입력해 주세요.", "error");
-    return;
-  }
   submitBtn.disabled = true;
   setStatus("확인 중… (몇 초 걸릴 수 있어요)");
   try {
-    await authenticate(buildCredential(name, phone, pepper));
+    await authenticate(buildCredential(name, phone));
   } finally {
     submitBtn.disabled = false;
   }
